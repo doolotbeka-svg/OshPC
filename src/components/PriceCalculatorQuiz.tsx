@@ -12,32 +12,31 @@ import {
 import {
   buildWhatsAppUrl,
   calculateQuizEstimate,
+  discountPercent,
   isValidKyrgyzPhone,
+  type DeviceKey,
 } from '../data/serviceData';
 import { useContent } from '../content/ContentContext';
 
-const DEVICE_OPTIONS = [
-  { id: 'Ноутбук', label: 'Ноутбук', desc: 'Lenovo, ASUS, HP, Acer, Apple MacBook', icon: Laptop },
+const DEVICE_OPTIONS: {
+  id: DeviceKey;
+  label: string;
+  desc: string;
+  icon: typeof Laptop;
+}[] = [
+  { id: 'laptop', label: 'Ноутбук', desc: 'Lenovo, ASUS, HP, Acer, Apple MacBook', icon: Laptop },
   {
-    id: 'Стационарный ПК',
+    id: 'pc',
     label: 'Стационарный ПК',
     desc: 'Домашний, игровой или офисный системный блок',
     icon: Monitor,
   },
   {
-    id: 'Моноблок',
+    id: 'aio',
     label: 'Моноблок',
     desc: 'iMac, HP All-in-One, Lenovo IdeaCentre',
     icon: MonitorSmartphone,
   },
-];
-
-const ISSUE_OPTIONS = [
-  { id: 'Не включается', label: 'Не включается', hint: 'Нет реакции на кнопку питания или черный экран' },
-  { id: 'Тормозит и греется', label: 'Тормозит и греется', hint: 'Шумит вентилятор, зависают программы' },
-  { id: 'Нужна установка Windows', label: 'Нужна установка Windows', hint: 'Windows 10/11, драйверы, Office, антивирус' },
-  { id: 'Разбит экран', label: 'Разбит экран', hint: 'Трещины, полосы или нет подсветки матрицы' },
-  { id: 'Другое', label: 'Другое', hint: 'Замена разъема, клавиатуры, апгрейд SSD, вирусы' },
 ];
 
 const LOCATION_OPTIONS = [
@@ -55,27 +54,29 @@ const LOCATION_OPTIONS = [
 
 export default function PriceCalculatorQuiz() {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
-  const [device, setDevice] = useState<string>('');
-  const [issue, setIssue] = useState<string>('');
+  const [deviceKey, setDevice] = useState<DeviceKey | ''>('');
+  const [issueId, setIssue] = useState<string>('');
   const [location, setLocation] = useState<string>('');
   const [phone, setPhone] = useState<string>('+996 ');
   const [phoneError, setPhoneError] = useState<string>('');
   const [submitted, setSubmitted] = useState(false);
-  const { contacts, sections } = useContent();
+  const { contacts, sections, calculator } = useContent();
   const text = sections.calculator;
+  const discount = discountPercent(calculator);
 
-  const estimate = calculateQuizEstimate(
-    device || 'Ноутбук',
-    issue || 'Другое',
-    location || 'Выезд мастера на дом по Ошу'
-  );
+  const ISSUE_OPTIONS = calculator.issues.map((i) => ({ id: i.id, label: i.title, hint: i.hint }));
+  // Подписи для показа и сообщения в WhatsApp
+  const device = DEVICE_OPTIONS.find((d) => d.id === deviceKey)?.label ?? '';
+  const issue = ISSUE_OPTIONS.find((i) => i.id === issueId)?.label ?? '';
+
+  const estimate = calculateQuizEstimate(calculator, deviceKey || 'laptop', issueId);
 
   const whatsappSummaryUrl = buildWhatsAppUrl(
     contacts.whatsappNumber,
-    `Здравствуйте! Рассчитал стоимость на сайте со скидкой 10%:\nУстройство: ${device}\nПроблема: ${issue}\nФормат: ${location}\nОриентировочная цена со скидкой: от ${estimate.discountedMin} до ${estimate.discountedMax} сом\nМой номер: ${phone.trim()}`
+    `Здравствуйте! Рассчитал стоимость на сайте${discount > 0 ? ` со скидкой ${discount}%` : ''}:\nУстройство: ${device}\nПроблема: ${issue}\nФормат: ${location}\nОриентировочная цена: от ${estimate.discountedMin} до ${estimate.discountedMax} сом\nМой номер: ${phone.trim()}`
   );
 
-  const handleSelectDevice = (selected: string) => {
+  const handleSelectDevice = (selected: DeviceKey) => {
     setDevice(selected);
     setStep(2);
   };
@@ -130,7 +131,9 @@ export default function PriceCalculatorQuiz() {
           <div className="border-b border-slate-100 px-6 py-4 sm:px-8">
             <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
               <span>{submitted ? 'Расчет готов' : step < 4 ? `Шаг ${step} из 3` : 'Финальный шаг'}</span>
-              <span className="tabular-nums text-blue-600">Скидка 10% активирована</span>
+              {discount > 0 && (
+                <span className="tabular-nums text-blue-600">Скидка {discount}% активирована</span>
+              )}
             </div>
             <div className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
               <div
@@ -151,7 +154,7 @@ export default function PriceCalculatorQuiz() {
                         Расчет готов — отправьте его мастеру в WhatsApp
                       </h3>
                       <p className="mt-1 text-sm text-slate-600">
-                        Мы открыли WhatsApp с расчетом — нажмите «Отправить», чтобы закрепить скидку 10%. Мастер свяжется с вами по номеру <span className="font-semibold text-slate-900 tabular-nums">{phone}</span> в течение 5–10 минут.
+                        Мы открыли WhatsApp с расчетом — нажмите «Отправить»{discount > 0 ? `, чтобы закрепить скидку ${discount}%` : ''}. Мастер свяжется с вами по номеру <span className="font-semibold text-slate-900 tabular-nums">{phone}</span> в течение 5–10 минут.
                       </p>
                     </div>
                   </div>
@@ -169,7 +172,9 @@ export default function PriceCalculatorQuiz() {
                     <p className="mt-1 text-sm font-semibold text-slate-900">{location}</p>
                   </div>
                   <div>
-                    <span className="text-xs text-slate-500">Ориентир со скидкой 10%</span>
+                    <span className="text-xs text-slate-500">
+                      {discount > 0 ? `Ориентир со скидкой ${discount}%` : 'Ориентировочная цена'}
+                    </span>
                     <p className="font-display mt-1 text-lg font-bold text-blue-600 tabular-nums">
                       {estimate.discountedMin.toLocaleString('ru-RU')} –{' '}
                       {estimate.discountedMax.toLocaleString('ru-RU')} сом
@@ -207,7 +212,7 @@ export default function PriceCalculatorQuiz() {
                     <div className="mt-5 grid gap-3 sm:grid-cols-3">
                       {DEVICE_OPTIONS.map((item) => {
                         const Icon = item.icon;
-                        const selected = device === item.id;
+                        const selected = deviceKey === item.id;
                         return (
                           <button
                             key={item.id}
@@ -240,7 +245,7 @@ export default function PriceCalculatorQuiz() {
                     </h3>
                     <div className="mt-5 grid gap-3 sm:grid-cols-2">
                       {ISSUE_OPTIONS.map((item) => {
-                        const selected = issue === item.id;
+                        const selected = issueId === item.id;
                         return (
                           <button
                             key={item.id}
@@ -328,7 +333,9 @@ export default function PriceCalculatorQuiz() {
                           </p>
                         </div>
                         <div className="sm:text-right">
-                          <span className="text-xs text-slate-500">Предварительно со скидкой 10%</span>
+                          <span className="text-xs text-slate-500">
+                            {discount > 0 ? `Предварительно со скидкой ${discount}%` : 'Предварительная цена'}
+                          </span>
                           <div className="font-display text-2xl font-bold text-blue-600 tabular-nums">
                             {estimate.discountedMin.toLocaleString('ru-RU')} –{' '}
                             {estimate.discountedMax.toLocaleString('ru-RU')} сом
@@ -339,7 +346,8 @@ export default function PriceCalculatorQuiz() {
 
                     <div className="mt-6">
                       <label htmlFor="quiz-phone" className="block text-sm font-semibold text-slate-900">
-                        Введите номер телефона (+996), чтобы зафиксировать цену и скидку 10%
+                        Введите номер телефона (+996), чтобы зафиксировать цену
+                        {discount > 0 ? ` и скидку ${discount}%` : ''}
                       </label>
                       <div className="mt-2.5 flex flex-col gap-3 sm:flex-row">
                         <input
@@ -361,7 +369,11 @@ export default function PriceCalculatorQuiz() {
                           type="submit"
                           className="inline-flex min-h-[48px] shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 sm:text-base"
                         >
-                          <span>Рассчитать стоимость и получить скидку 10%</span>
+                          <span>
+                            {discount > 0
+                              ? `Рассчитать стоимость и получить скидку ${discount}%`
+                              : 'Рассчитать стоимость'}
+                          </span>
                           <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
                         </button>
                       </div>

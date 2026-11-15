@@ -22,6 +22,11 @@ const TABS: { key: keyof SiteContent; label: string; hint: string }[] = [
   { key: 'contacts', label: 'Контакты', hint: 'Телефон, WhatsApp, адрес, график и ссылки на соцсети.' },
   { key: 'hero', label: 'Главный экран', hint: 'Первый экран сайта: заголовок, текст, цифры и пункты доверия.' },
   { key: 'services', label: 'Услуги и цены', hint: 'Карточки услуг в прайс-листе.' },
+  {
+    key: 'calculator',
+    label: 'Цены калькулятора',
+    hint: 'Скидка и цены «от–до» в сомах для каждой проблемы и типа устройства. Цена со скидкой округляется до 50 сом.',
+  },
   { key: 'workflow', label: 'Как мы работаем', hint: 'Шаги работы с клиентом.' },
   { key: 'advantages', label: 'Преимущества', hint: 'Блок «Почему выбирают нас».' },
   { key: 'reviews', label: 'Отзывы', hint: 'Отзывы клиентов. Общий рейтинг считается автоматически.' },
@@ -79,6 +84,15 @@ const LABELS: Record<string, string> = {
   reviews: 'Отзывы',
   faq: 'Вопросы и ответы',
   contacts: 'Контакты',
+  discountPercent: 'Скидка, % (0 — без скидки)',
+  issues: 'Проблемы (шаг 2 калькулятора)',
+  hint: 'Пояснение',
+  time: 'Примерное время работы',
+  laptop: 'Ноутбук',
+  pc: 'Стационарный ПК',
+  aio: 'Моноблок',
+  min: 'Цена от, сом',
+  max: 'Цена до, сом',
 };
 
 const LONG_FIELDS = new Set([
@@ -108,6 +122,15 @@ const TEMPLATES: Record<string, unknown> = {
   reviews: { id: '', name: 'Имя клиента', district: '', device: '', issue: '', text: '', source: '2ГИС', date: '', rating: 5 },
   faq: { id: '', question: 'Новый вопрос', answer: '' },
   zones: { id: '', name: 'Новый район', eta: '' },
+  issues: {
+    id: '',
+    title: 'Новая проблема',
+    hint: '',
+    time: '',
+    laptop: { min: 500, max: 1500 },
+    pc: { min: 500, max: 1500 },
+    aio: { min: 500, max: 1500 },
+  },
 };
 
 function newItem(listName: string): unknown {
@@ -169,9 +192,9 @@ function ValueEditor({ name, value, onChange }: NodeProps) {
     return (
       <input
         type="number"
-        min={name === 'rating' ? 1 : undefined}
-        max={name === 'rating' ? 5 : undefined}
-        step={name === 'rating' ? 0.5 : 1}
+        min={name === 'rating' ? 1 : 0}
+        max={name === 'rating' ? 5 : name === 'discountPercent' ? 90 : undefined}
+        step={name === 'rating' ? 0.5 : name === 'min' || name === 'max' ? 50 : 1}
         value={value}
         onChange={(e) => onChange(e.target.value === '' ? 0 : Number(e.target.value))}
         className={`${inputClass} max-w-[140px]`}
@@ -233,13 +256,16 @@ function ObjectEditor({
             </fieldset>
           );
         }
+        // Списки нельзя класть в <label>: клик по кнопке внутри метки
+        // дублируется браузером на первую кнопку и карточка сразу закрывается
+        const Wrapper = Array.isArray(child) ? 'div' : 'label';
         return (
-          <label key={key} className="block">
+          <Wrapper key={key} className="block">
             <span className="mb-1.5 block text-xs font-semibold text-slate-600">
               {LABELS[key] ?? key}
             </span>
             <ValueEditor name={key} value={child} onChange={update} />
-          </label>
+          </Wrapper>
         );
       })}
     </div>
@@ -704,10 +730,6 @@ export default function AdminPanel() {
               onChange={(v) => setDraft({ ...draft, [tab.key]: v } as SiteContent)}
             />
           </div>
-          <p className="mt-4 text-xs text-slate-500">
-            Цены калькулятора стоимости задаются в коде (src/data/serviceData.ts) и здесь не
-            редактируются.
-          </p>
           <button
             type="button"
             onClick={resetToDefaults}

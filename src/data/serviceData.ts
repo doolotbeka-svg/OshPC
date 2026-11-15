@@ -48,6 +48,28 @@ export interface SiteContacts {
   mapGoogleUrl: string;
 }
 
+export type DeviceKey = 'laptop' | 'pc' | 'aio';
+
+export interface PriceRange {
+  min: number;
+  max: number;
+}
+
+export interface CalculatorIssue {
+  id: string;
+  title: string;
+  hint: string;
+  time: string;
+  laptop: PriceRange;
+  pc: PriceRange;
+  aio: PriceRange;
+}
+
+export interface CalculatorSettings {
+  discountPercent: number;
+  issues: CalculatorIssue[];
+}
+
 export interface SiteContent {
   seo: { title: string; description: string };
   contacts: SiteContacts;
@@ -73,6 +95,7 @@ export interface SiteContent {
   reviews: ReviewItem[];
   faq: FaqItem[];
   zones: { id: string; name: string; eta: string }[];
+  calculator: CalculatorSettings;
 }
 
 export const SERVICE_CATEGORIES: { id: ServiceCategory; label: string }[] = [
@@ -370,6 +393,56 @@ export const DEFAULT_CONTENT: SiteContent = {
     { id: 'anar', name: 'мкр. Анар / Ак-Тилек', eta: '30–40 мин' },
     { id: 'hbk', name: 'мкр. ХБК / Кулатов / Черемушки', eta: '25–40 мин' },
   ],
+  calculator: {
+    discountPercent: 10,
+    issues: [
+      {
+        id: 'no-power',
+        title: 'Не включается',
+        hint: 'Нет реакции на кнопку питания или черный экран',
+        time: '1–3 часа',
+        laptop: { min: 800, max: 3500 },
+        pc: { min: 800, max: 2500 },
+        aio: { min: 1200, max: 3500 },
+      },
+      {
+        id: 'slow-hot',
+        title: 'Тормозит и греется',
+        hint: 'Шумит вентилятор, зависают программы',
+        time: '60–90 минут',
+        laptop: { min: 800, max: 1600 },
+        pc: { min: 800, max: 1600 },
+        aio: { min: 1100, max: 2000 },
+      },
+      {
+        id: 'windows',
+        title: 'Нужна установка Windows',
+        hint: 'Windows 10/11, драйверы, Office, антивирус',
+        time: '60–90 минут',
+        laptop: { min: 700, max: 1100 },
+        pc: { min: 700, max: 1100 },
+        aio: { min: 700, max: 1100 },
+      },
+      {
+        id: 'screen',
+        title: 'Разбит экран',
+        hint: 'Трещины, полосы или нет подсветки матрицы',
+        time: '1–2 часа (работа без учета матрицы)',
+        laptop: { min: 1500, max: 2500 },
+        pc: { min: 1500, max: 2500 },
+        aio: { min: 2000, max: 3500 },
+      },
+      {
+        id: 'other',
+        title: 'Другое',
+        hint: 'Замена разъема, клавиатуры, апгрейд SSD, вирусы',
+        time: 'от 40 минут после осмотра',
+        laptop: { min: 500, max: 1500 },
+        pc: { min: 500, max: 1500 },
+        aio: { min: 500, max: 1500 },
+      },
+    ],
+  },
 };
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
@@ -433,53 +506,29 @@ export interface QuizCalculation {
   estimatedTime: string;
 }
 
+/** Скидка калькулятора в процентах, ограниченная разумными пределами 0–90. */
+export function discountPercent(settings: CalculatorSettings): number {
+  const value = Number(settings.discountPercent);
+  return Number.isFinite(value) ? Math.min(90, Math.max(0, value)) : 0;
+}
+
+/** Расчет цены по настройкам из админ-панели. Цены со скидкой округляются до 50 сом. */
 export function calculateQuizEstimate(
-  device: string,
-  issue: string,
-  location: string
+  settings: CalculatorSettings,
+  device: DeviceKey,
+  issueId: string
 ): QuizCalculation {
-  let minPrice = 500;
-  let maxPrice = 1200;
-  let estimatedTime = '1–2 часа';
+  const issue = settings.issues.find((i) => i.id === issueId) ?? settings.issues[0];
+  const range = issue?.[device] ?? { min: 0, max: 0 };
+  const a = Math.max(0, Number(range.min) || 0);
+  const b = Math.max(0, Number(range.max) || 0);
+  const minPrice = Math.min(a, b);
+  const maxPrice = Math.max(a, b);
+  const factor = 1 - discountPercent(settings) / 100;
+  const estimatedTime = issue?.time ?? '';
 
-  switch (issue) {
-    case 'Не включается':
-      minPrice = device === 'Моноблок' ? 1200 : 800;
-      maxPrice = device === 'Стационарный ПК' ? 2500 : 3500;
-      estimatedTime = '1–3 часа';
-      break;
-    case 'Тормозит и греется':
-      minPrice = 800;
-      maxPrice = 1600;
-      estimatedTime = '60–90 минут';
-      break;
-    case 'Нужна установка Windows':
-      minPrice = 700;
-      maxPrice = 1100;
-      estimatedTime = '60–90 минут';
-      break;
-    case 'Разбит экран':
-      minPrice = device === 'Моноблок' ? 2000 : 1500;
-      maxPrice = device === 'Моноблок' ? 3500 : 2500;
-      estimatedTime = '1–2 часа (работа без учета матрицы)';
-      break;
-    default:
-      minPrice = 500;
-      maxPrice = 1500;
-      estimatedTime = 'от 40 минут после осмотра';
-      break;
-  }
-
-  if (device === 'Моноблок' && issue === 'Тормозит и греется') {
-    minPrice += 300;
-    maxPrice += 400;
-  }
-
-  // Формат (выезд / сервис) пока не влияет на цену: выезд бесплатный при ремонте.
-  void location;
-
-  const discountedMin = Math.round((minPrice * 0.9) / 50) * 50;
-  const discountedMax = Math.round((maxPrice * 0.9) / 50) * 50;
+  const discountedMin = Math.round((minPrice * factor) / 50) * 50;
+  const discountedMax = Math.round((maxPrice * factor) / 50) * 50;
 
   return {
     minPrice,
