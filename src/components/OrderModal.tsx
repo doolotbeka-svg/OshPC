@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { CheckCircle2, MessageCircle, X } from 'lucide-react';
 import { buildWhatsAppUrl, isValidKyrgyzPhone } from '../data/serviceData';
 import { useContent } from '../content/ContentContext';
+import { submitLead } from '../lib/submitLead';
 
 interface OrderModalProps {
   isOpen: boolean;
@@ -15,12 +16,16 @@ export default function OrderModal({ isOpen, initialProblem = '', onClose }: Ord
   const [problem, setProblem] = useState(initialProblem);
   const [error, setError] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [delivered, setDelivered] = useState(false);
+  const [honeypot, setHoneypot] = useState('');
   const { contacts } = useContent();
 
   useEffect(() => {
     if (isOpen) {
       setProblem(initialProblem);
       setSubmitted(false);
+      setDelivered(false);
       setError('');
     }
   }, [isOpen, initialProblem]);
@@ -49,8 +54,9 @@ export default function OrderModal({ isOpen, initialProblem = '', onClose }: Ord
     }`
   );
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (sending) return;
 
     if (name.trim().length < 2) {
       setError('Пожалуйста, укажите ваше имя.');
@@ -62,9 +68,19 @@ export default function OrderModal({ isOpen, initialProblem = '', onClose }: Ord
     }
 
     setError('');
+    setSending(true);
+    // Сервер пересылает заявку мастеру в WhatsApp. Если не получилось —
+    // покажем клиенту кнопку, чтобы он отправил заявку сам.
+    const ok = await submitLead({
+      source: 'order',
+      name: name.trim(),
+      phone: phone.trim(),
+      problem: problem.trim(),
+      website: honeypot,
+    });
+    setSending(false);
+    setDelivered(ok);
     setSubmitted(true);
-    // У сайта нет бэкенда: заявка уходит мастеру сообщением в WhatsApp
-    window.open(whatsappDirect, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -91,24 +107,36 @@ export default function OrderModal({ isOpen, initialProblem = '', onClose }: Ord
           <div className="py-2">
             <CheckCircle2 className="h-10 w-10 text-[#16A34A]" aria-hidden="true" />
             <h2 id="order-modal-title" className="font-display mt-4 text-2xl font-bold text-slate-900">
-              Почти готово!
+              {delivered ? 'Заявка отправлена!' : 'Почти готово!'}
             </h2>
-            <p className="mt-2 text-sm leading-relaxed text-slate-600">
-              Спасибо, {name.trim()}. Мы открыли WhatsApp с текстом заявки — нажмите «Отправить», и
-              дежурный мастер в Оше перезвонит на номер{' '}
-              <span className="font-semibold text-slate-900 tabular-nums">{phone}</span> в течение 5–10
-              минут. Если WhatsApp не открылся, нажмите кнопку ниже.
-            </p>
+            {delivered ? (
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                Спасибо, {name.trim()}. Дежурный мастер в Оше перезвонит на номер{' '}
+                <span className="font-semibold text-slate-900 tabular-nums">{phone}</span> в течение
+                5–10 минут, чтобы уточнить детали и время выезда.
+              </p>
+            ) : (
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                Спасибо, {name.trim()}. Не получилось передать заявку автоматически — нажмите кнопку
+                ниже и отправьте сообщение в WhatsApp, мастер перезвонит на номер{' '}
+                <span className="font-semibold text-slate-900 tabular-nums">{phone}</span> в течение
+                5–10 минут.
+              </p>
+            )}
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <a
                 href={whatsappDirect}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-[#16A34A] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#15803D]"
+                className={
+                  delivered
+                    ? 'inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50'
+                    : 'inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-[#16A34A] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#15803D]'
+                }
               >
                 <MessageCircle className="h-4 w-4" aria-hidden="true" />
-                <span>Отправить заявку в WhatsApp</span>
+                <span>{delivered ? 'Написать в WhatsApp' : 'Отправить заявку в WhatsApp'}</span>
               </a>
               <button
                 type="button"
@@ -174,6 +202,18 @@ export default function OrderModal({ isOpen, initialProblem = '', onClose }: Ord
                 />
               </div>
 
+              {/* Ловушка для ботов: поле скрыто от людей и программ чтения с экрана */}
+              <input
+                type="text"
+                name="website"
+                tabIndex={-1}
+                autoComplete="off"
+                aria-hidden="true"
+                value={honeypot}
+                onChange={(e) => setHoneypot(e.target.value)}
+                className="absolute -left-[9999px] h-0 w-0 opacity-0"
+              />
+
               {error && (
                 <p className="text-xs font-medium text-red-600" role="alert">
                   {error}
@@ -182,9 +222,10 @@ export default function OrderModal({ isOpen, initialProblem = '', onClose }: Ord
 
               <button
                 type="submit"
-                className="flex min-h-[48px] w-full items-center justify-center rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                disabled={sending}
+                className="flex min-h-[48px] w-full items-center justify-center rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-60"
               >
-                Отправить заявку мастеру
+                {sending ? 'Отправляем…' : 'Отправить заявку мастеру'}
               </button>
               <p className="text-center text-xs text-slate-500">
                 Бесплатная диагностика при ремонте · Оплата после проверки

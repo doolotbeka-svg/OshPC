@@ -17,6 +17,7 @@ import {
   type DeviceKey,
 } from '../data/serviceData';
 import { useContent } from '../content/ContentContext';
+import { submitLead } from '../lib/submitLead';
 
 const DEVICE_OPTIONS: {
   id: DeviceKey;
@@ -60,6 +61,8 @@ export default function PriceCalculatorQuiz() {
   const [phone, setPhone] = useState<string>('+996 ');
   const [phoneError, setPhoneError] = useState<string>('');
   const [submitted, setSubmitted] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [delivered, setDelivered] = useState(false);
   const { contacts, sections, calculator } = useContent();
   const text = sections.calculator;
   const discount = discountPercent(calculator);
@@ -91,16 +94,29 @@ export default function PriceCalculatorQuiz() {
     setStep(4);
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (sending) return;
     if (!isValidKyrgyzPhone(phone)) {
       setPhoneError('Введите корректный номер телефона Кыргызстана (например, +996 555 12 34 56)');
       return;
     }
     setPhoneError('');
+    setSending(true);
+    // Сервер пересылает расчет мастеру в WhatsApp; при неудаче клиент отправит его сам
+    const ok = await submitLead({
+      source: 'quiz',
+      phone: phone.trim(),
+      device,
+      issue,
+      location,
+      price: `${estimate.discountedMin}–${estimate.discountedMax} сом${
+        discount > 0 ? ` (со скидкой ${discount}%)` : ''
+      }`,
+    });
+    setSending(false);
+    setDelivered(ok);
     setSubmitted(true);
-    // У сайта нет бэкенда: расчет уходит мастеру сообщением в WhatsApp
-    window.open(whatsappSummaryUrl, '_blank', 'noopener,noreferrer');
   };
 
   const handleReset = () => {
@@ -111,6 +127,7 @@ export default function PriceCalculatorQuiz() {
     setPhone('+996 ');
     setPhoneError('');
     setSubmitted(false);
+    setDelivered(false);
   };
 
   const progressScale = step === 1 ? 0.25 : step === 2 ? 0.5 : step === 3 ? 0.75 : 1;
@@ -151,10 +168,16 @@ export default function PriceCalculatorQuiz() {
                     <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-[#16A34A]" aria-hidden="true" />
                     <div>
                       <h3 className="font-display text-xl font-bold text-slate-900">
-                        Расчет готов — отправьте его мастеру в WhatsApp
+                        {delivered
+                          ? `Заявка принята${discount > 0 ? ` — скидка ${discount}% закреплена за вашим номером` : ''}`
+                          : 'Расчет готов — отправьте его мастеру в WhatsApp'}
                       </h3>
                       <p className="mt-1 text-sm text-slate-600">
-                        Мы открыли WhatsApp с расчетом — нажмите «Отправить»{discount > 0 ? `, чтобы закрепить скидку ${discount}%` : ''}. Мастер свяжется с вами по номеру <span className="font-semibold text-slate-900 tabular-nums">{phone}</span> в течение 5–10 минут.
+                        {delivered
+                          ? 'Мастер свяжется с вами по номеру '
+                          : 'Не получилось передать расчет автоматически — нажмите «Отправить расчет в WhatsApp». Мастер свяжется с вами по номеру '}
+                        <span className="font-semibold text-slate-900 tabular-nums">{phone}</span> в
+                        течение 5–10 минут.
                       </p>
                     </div>
                   </div>
@@ -183,15 +206,17 @@ export default function PriceCalculatorQuiz() {
                 </div>
 
                 <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-                  <a
-                    href={whatsappSummaryUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex min-h-[44px] items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-[#16A34A] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#15803D]"
-                  >
-                    <MessageCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-                    <span>Отправить расчет в WhatsApp</span>
-                  </a>
+                  {!delivered && (
+                    <a
+                      href={whatsappSummaryUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex min-h-[44px] items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-[#16A34A] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#15803D]"
+                    >
+                      <MessageCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      <span>Отправить расчет в WhatsApp</span>
+                    </a>
+                  )}
                   <button
                     type="button"
                     onClick={handleReset}
@@ -367,10 +392,13 @@ export default function PriceCalculatorQuiz() {
                         />
                         <button
                           type="submit"
-                          className="inline-flex min-h-[48px] shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 sm:text-base"
+                          disabled={sending}
+                          className="inline-flex min-h-[48px] shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-60 sm:text-base"
                         >
                           <span>
-                            {discount > 0
+                            {sending
+                              ? 'Отправляем…'
+                              : discount > 0
                               ? `Рассчитать стоимость и получить скидку ${discount}%`
                               : 'Рассчитать стоимость'}
                           </span>
