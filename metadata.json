@@ -1,0 +1,6 @@
+{
+  "name": "OshPC Service — Ремонт ПК и ноутбуков в Оше",
+  "description": "Сервисный центр по ремонту, диагностике и настройке компьютеров и ноутбуков в городе Ош, Кыргызстан. Бесплатная диагностика при ремонте, выезд мастера за 40 минут, гарантия до 1 года.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
