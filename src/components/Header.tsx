@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Cpu, Menu, Phone, MessageCircle, X } from 'lucide-react';
-import { SITE_CONTACTS } from '../data/serviceData';
+import { phoneHref, whatsappUrl } from '../data/serviceData';
+import { useContent } from '../content/ContentContext';
 
 interface HeaderProps {
   onOpenOrderModal: (prefill?: string) => void;
@@ -16,6 +17,12 @@ const NAV_LINKS = [
 
 export default function Header({ onOpenOrderModal }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { contacts, hero } = useContent();
+  const SITE_CONTACTS = {
+    ...contacts,
+    phoneHref: phoneHref(contacts),
+    whatsappUrl: whatsappUrl(contacts),
+  };
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur-md">
@@ -113,7 +120,7 @@ export default function Header({ onOpenOrderModal }: HeaderProps) {
               }}
               className="flex min-h-[44px] items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
             >
-              Вызвать мастера / Узнать цену
+              {hero.ctaLabel}
             </button>
           </div>
         </div>

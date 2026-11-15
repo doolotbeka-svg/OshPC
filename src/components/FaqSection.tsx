@@ -1,26 +1,29 @@
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { FAQ_ITEMS } from '../data/serviceData';
+import { useContent } from '../content/ContentContext';
 
 export default function FaqSection() {
-  const [openId, setOpenId] = useState<string | null>(FAQ_ITEMS[0].id);
+  const { faq, sections } = useContent();
+  const [openId, setOpenId] = useState<string | null>(faq[0]?.id ?? null);
 
   const toggleItem = (id: string) => {
     setOpenId((prev) => (prev === id ? null : id));
   };
 
+  if (faq.length === 0) return null;
+
   return (
     <section className="border-t border-slate-200/80 bg-[#F8FAFC] py-16 sm:py-20">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
         <div className="max-w-2xl">
-          <p className="text-sm font-semibold text-blue-600">Частые вопросы</p>
+          <p className="text-sm font-semibold text-blue-600">{sections.faq.eyebrow}</p>
           <h2 className="font-display mt-2 text-balance text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-            Ответы перед вызовом мастера
+            {sections.faq.title}
           </h2>
         </div>
 
         <div className="mt-8 divide-y divide-slate-200 overflow-hidden rounded-2xl border border-slate-200 bg-white">
-          {FAQ_ITEMS.map((item) => {
+          {faq.map((item) => {
             const isOpen = openId === item.id;
             return (
               <div key={item.id}>
@@ -44,7 +47,7 @@ export default function FaqSection() {
                 {isOpen && (
                   <div
                     id={`${item.id}-panel`}
-                    className="border-t border-slate-100 bg-slate-50/40 px-5 pb-5 pt-3 text-sm leading-relaxed text-slate-600 sm:px-6 sm:text-base"
+                    className="whitespace-pre-line border-t border-slate-100 bg-slate-50/40 px-5 pb-5 pt-3 text-sm leading-relaxed text-slate-600 sm:px-6 sm:text-base"
                   >
                     {item.answer}
                   </div>

@@ -9,25 +9,31 @@ import {
   Phone,
   Send,
 } from 'lucide-react';
-import { SITE_CONTACTS } from '../data/serviceData';
+import { phoneHref, safeUrl, whatsappUrl } from '../data/serviceData';
+import { useContent } from '../content/ContentContext';
 
 interface ContactsFooterProps {
   onOpenOrderModal: (prefill?: string) => void;
   onOpenPrivacy: () => void;
 }
 
-const OSH_ZONES = [
-  { id: 'center', name: 'Центр (Курманжан Датка)', eta: '15–20 мин' },
-  { id: 'yugovostok', name: 'мкр. Юго-Восток', eta: '25–35 мин' },
-  { id: 'anar', name: 'мкр. Анар / Ак-Тилек', eta: '30–40 мин' },
-  { id: 'hbk', name: 'мкр. ХБК / Кулатов / Черемушки', eta: '25–40 мин' },
-];
-
 export default function ContactsFooter({
   onOpenOrderModal,
   onOpenPrivacy,
 }: ContactsFooterProps) {
-  const [selectedZone, setSelectedZone] = useState(OSH_ZONES[0]);
+  const { contacts, zones: OSH_ZONES, sections } = useContent();
+  const SITE_CONTACTS = {
+    ...contacts,
+    phoneHref: phoneHref(contacts),
+    whatsappUrl: whatsappUrl(contacts),
+    telegramUrl: safeUrl(contacts.telegramUrl),
+    instagramUrl: safeUrl(contacts.instagramUrl),
+    map2gisUrl: safeUrl(contacts.map2gisUrl),
+    mapGoogleUrl: safeUrl(contacts.mapGoogleUrl),
+  };
+  const text = sections.contacts;
+  const [selectedZoneId, setSelectedZoneId] = useState(OSH_ZONES[0]?.id);
+  const selectedZone = OSH_ZONES.find((z) => z.id === selectedZoneId) ?? OSH_ZONES[0];
 
   return (
     <footer id="contacts" className="border-t border-slate-200 bg-white">
@@ -36,13 +42,11 @@ export default function ContactsFooter({
           {/* Contact Details */}
           <div className="flex flex-col justify-between lg:col-span-5">
             <div>
-              <p className="text-sm font-semibold text-blue-600">Контакты в Оше</p>
+              <p className="text-sm font-semibold text-blue-600">{text.eyebrow}</p>
               <h2 className="font-display mt-2 text-balance text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-                Приезжайте в сервис или вызывайте мастера
+                {text.title}
               </h2>
-              <p className="mt-3 text-base text-slate-600">
-                Работаем без выходных. Принимаем оплату наличными, через MBank, О!Деньги и Элкарт.
-              </p>
+              <p className="mt-3 text-base text-slate-600">{text.subtitle}</p>
 
               <dl className="mt-7 space-y-5">
                 <div className="flex items-start gap-3.5">
@@ -134,9 +138,11 @@ export default function ContactsFooter({
                   <span className="text-xs font-medium text-slate-500">
                     Карта выезда по г. Ош · 2ГИС / Google Maps
                   </span>
-                  <p className="font-display text-sm font-bold text-slate-900">
-                    {selectedZone.name} — время прибытия {selectedZone.eta}
-                  </p>
+                  {selectedZone && (
+                    <p className="font-display text-sm font-bold text-slate-900">
+                      {selectedZone.name} — время прибытия {selectedZone.eta}
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -167,7 +173,7 @@ export default function ContactsFooter({
                   viewBox="0 0 800 420"
                   className="h-full w-full object-cover"
                   role="img"
-                  aria-label="Схема расположения сервисного центра OshPC Service в центре города Ош"
+                  aria-label={`Схема расположения сервисного центра ${SITE_CONTACTS.brand} в центре города Ош`}
                 >
                   <rect width="800" height="420" fill="#F1F5F9" />
                   {/* Ak-Buura River */}
@@ -222,10 +228,10 @@ export default function ContactsFooter({
                     <circle r="9" fill="#2563EB" stroke="#FFFFFF" strokeWidth="3" />
                     <rect x="16" y="-22" width="196" height="44" rx="10" fill="#0F172A" />
                     <text x="28" y="-4" fill="#FFFFFF" fontSize="13" fontWeight="700">
-                      OshPC Service
+                      {SITE_CONTACTS.brand}
                     </text>
                     <text x="28" y="13" fill="#CBD5E1" fontSize="11">
-                      ул. Курманжан Датка, 248
+                      {SITE_CONTACTS.addressShort}
                     </text>
                   </g>
                 </svg>
@@ -235,12 +241,12 @@ export default function ContactsFooter({
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-white px-5 py-4">
                 <div className="flex flex-wrap gap-1.5">
                   {OSH_ZONES.map((zone) => {
-                    const active = selectedZone.id === zone.id;
+                    const active = selectedZone?.id === zone.id;
                     return (
                       <button
                         key={zone.id}
                         type="button"
-                        onClick={() => setSelectedZone(zone)}
+                        onClick={() => setSelectedZoneId(zone.id)}
                         className={`min-h-[34px] rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                           active
                             ? 'bg-blue-600 text-white'
@@ -255,7 +261,9 @@ export default function ContactsFooter({
 
                 <button
                   type="button"
-                  onClick={() => onOpenOrderModal(`Выезд мастера: ${selectedZone.name}`)}
+                  onClick={() =>
+                    onOpenOrderModal(selectedZone ? `Выезд мастера: ${selectedZone.name}` : '')
+                  }
                   className="text-xs font-semibold text-blue-600 hover:text-blue-700"
                 >
                   Вызвать в этот район →
@@ -270,7 +278,7 @@ export default function ContactsFooter({
           <div className="flex items-center gap-2.5">
             <Cpu className="h-4 w-4 text-blue-600" aria-hidden="true" />
             <span>
-              © 2026 {SITE_CONTACTS.brand} · г. Ош, Кыргызстан. Все права защищены.
+              © {new Date().getFullYear()} {SITE_CONTACTS.brand} · г. Ош, Кыргызстан. Все права защищены.
             </span>
           </div>
 

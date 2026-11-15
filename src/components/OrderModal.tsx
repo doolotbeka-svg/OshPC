@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { CheckCircle2, MessageCircle, X } from 'lucide-react';
 import { buildWhatsAppUrl, isValidKyrgyzPhone } from '../data/serviceData';
+import { useContent } from '../content/ContentContext';
 
 interface OrderModalProps {
   isOpen: boolean;
@@ -14,6 +15,7 @@ export default function OrderModal({ isOpen, initialProblem = '', onClose }: Ord
   const [problem, setProblem] = useState(initialProblem);
   const [error, setError] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const { contacts } = useContent();
 
   useEffect(() => {
     if (isOpen) {
@@ -41,7 +43,8 @@ export default function OrderModal({ isOpen, initialProblem = '', onClose }: Ord
   if (!isOpen) return null;
 
   const whatsappDirect = buildWhatsAppUrl(
-    `Здравствуйте! Заявка с сайта OshPC Service:\nИмя: ${name.trim()}\nТелефон: ${phone.trim()}\nПроблема: ${
+    contacts.whatsappNumber,
+    `Здравствуйте! Заявка с сайта ${contacts.brand}:\nИмя: ${name.trim()}\nТелефон: ${phone.trim()}\nПроблема: ${
       problem.trim() || 'Нужна консультация и диагностика'
     }`
   );

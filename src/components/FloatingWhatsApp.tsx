@@ -1,10 +1,12 @@
 import { MessageCircle } from 'lucide-react';
-import { SITE_CONTACTS } from '../data/serviceData';
+import { whatsappUrl } from '../data/serviceData';
+import { useContent } from '../content/ContentContext';
 
 export default function FloatingWhatsApp() {
+  const { contacts } = useContent();
   return (
     <a
-      href={SITE_CONTACTS.whatsappUrl}
+      href={whatsappUrl(contacts)}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Написать мастеру в WhatsApp"

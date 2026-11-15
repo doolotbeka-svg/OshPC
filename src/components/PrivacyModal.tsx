@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { X } from 'lucide-react';
-import { SITE_CONTACTS } from '../data/serviceData';
+import { useContent } from '../content/ContentContext';
 
 interface PrivacyModalProps {
   isOpen: boolean;
@@ -8,6 +8,7 @@ interface PrivacyModalProps {
 }
 
 export default function PrivacyModal({ isOpen, onClose }: PrivacyModalProps) {
+  const SITE_CONTACTS = useContent().contacts;
   useEffect(() => {
     if (!isOpen) return;
     const onKeyDown = (e: KeyboardEvent) => {

@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { MessageCircle, Wrench } from 'lucide-react';
 import {
-  SERVICES,
   SERVICE_CATEGORIES,
-  SITE_CONTACTS,
+  categoryLabel,
+  whatsappUrl,
   type ServiceCategory,
 } from '../data/serviceData';
+import { useContent } from '../content/ContentContext';
 
 interface ServicesPricingProps {
   onSelectService: (serviceTitle: string) => void;
@@ -13,6 +14,8 @@ interface ServicesPricingProps {
 
 export default function ServicesPricing({ onSelectService }: ServicesPricingProps) {
   const [activeCategory, setActiveCategory] = useState<ServiceCategory>('all');
+  const { services: SERVICES, sections, contacts } = useContent();
+  const text = sections.services;
 
   const filteredServices =
     activeCategory === 'all'
@@ -24,14 +27,11 @@ export default function ServicesPricing({ onSelectService }: ServicesPricingProp
       <div id="prices" className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl">
-            <p className="text-sm font-semibold text-blue-600">Услуги и прозрачный прайс-лист</p>
+            <p className="text-sm font-semibold text-blue-600">{text.eyebrow}</p>
             <h2 className="font-display mt-2 text-balance text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-              Честные цены на популярные работы в сомах
+              {text.title}
             </h2>
-            <p className="mt-3 text-base text-slate-600">
-              Стоимость согласуется до начала ремонта. Оригинальные запчасти и расходники всегда в
-              наличии на нашем складе в Оше.
-            </p>
+            <p className="mt-3 text-base text-slate-600">{text.subtitle}</p>
           </div>
 
           {/* Interactive segmented filter tabs */}
@@ -73,7 +73,7 @@ export default function ServicesPricing({ onSelectService }: ServicesPricingProp
                 <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
                   <span>{String(index + 1).padStart(2, '0')}</span>
                   <span aria-hidden="true">·</span>
-                  <span>{service.categoryLabel}</span>
+                  <span>{categoryLabel(service.category)}</span>
                   <span aria-hidden="true">·</span>
                   <span className="tabular-nums">{service.duration}</span>
                 </div>
@@ -110,15 +110,11 @@ export default function ServicesPricing({ onSelectService }: ServicesPricingProp
         {/* Bottom WhatsApp Prompt */}
         <div className="mt-8 flex flex-col items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-[#F8FAFC] p-6 sm:flex-row sm:items-center">
           <div>
-            <h3 className="font-display text-lg font-semibold text-slate-900">
-              Не нашли свою проблему в списке?
-            </h3>
-            <p className="mt-1 text-sm text-slate-600">
-              Опишите поломку или отправьте фото экрана в WhatsApp — мастер назовет точную цену за 5 минут.
-            </p>
+            <h3 className="font-display text-lg font-semibold text-slate-900">{text.ctaTitle}</h3>
+            <p className="mt-1 text-sm text-slate-600">{text.ctaText}</p>
           </div>
           <a
-            href={SITE_CONTACTS.whatsappUrl}
+            href={whatsappUrl(contacts)}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-[#16A34A] px-5 py-3 text-sm font-semibold text-white transition-colors duration-150 hover:bg-[#15803D] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#16A34A]"

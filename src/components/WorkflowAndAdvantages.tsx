@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Cpu, MapPin, ShieldCheck, Wallet } from 'lucide-react';
-import { ADVANTAGES, WORKFLOW_STEPS } from '../data/serviceData';
+import { useContent } from '../content/ContentContext';
 import workshopImage from '../assets/images/workshop_diagnostics_osh_1794754545576.jpg';
 
 const ADVANTAGE_ICONS = [Wallet, MapPin, Cpu, ShieldCheck];
 
 export default function WorkflowAndAdvantages() {
   const [imageError, setImageError] = useState(false);
+  const { workflow: WORKFLOW_STEPS, advantages: ADVANTAGES, sections } = useContent();
 
   return (
     <>
@@ -14,16 +15,16 @@ export default function WorkflowAndAdvantages() {
       <section className="bg-white py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="max-w-2xl">
-            <p className="text-sm font-semibold text-blue-600">Как мы работаем</p>
+            <p className="text-sm font-semibold text-blue-600">{sections.workflow.eyebrow}</p>
             <h2 className="font-display mt-2 text-balance text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-              От обращения до готового устройства — 4 понятных шага
+              {sections.workflow.title}
             </h2>
           </div>
 
           <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {WORKFLOW_STEPS.map((step) => (
+            {WORKFLOW_STEPS.map((step, idx) => (
               <div
-                key={step.number}
+                key={idx}
                 className="flex flex-col rounded-2xl border border-slate-200 bg-[#F8FAFC] p-6"
               >
                 <span className="font-display text-2xl font-bold text-blue-600 tabular-nums">
@@ -70,17 +71,17 @@ export default function WorkflowAndAdvantages() {
 
             {/* Right advantages column */}
             <div className="flex flex-col justify-center lg:col-span-7">
-              <p className="text-sm font-semibold text-blue-600">Почему выбирают нас</p>
+              <p className="text-sm font-semibold text-blue-600">{sections.advantages.eyebrow}</p>
               <h2 className="font-display mt-2 text-balance text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-                Сервис в Оше, которому доверяют технику и рабочие данные
+                {sections.advantages.title}
               </h2>
 
               <div className="mt-8 grid gap-4 sm:grid-cols-2">
                 {ADVANTAGES.map((item, idx) => {
-                  const Icon = ADVANTAGE_ICONS[idx] || ShieldCheck;
+                  const Icon = ADVANTAGE_ICONS[idx % ADVANTAGE_ICONS.length] || ShieldCheck;
                   return (
                     <div
-                      key={item.title}
+                      key={idx}
                       className="rounded-2xl border border-slate-200 bg-white p-5"
                     >
                       <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">

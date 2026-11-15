@@ -14,6 +14,7 @@ import {
   calculateQuizEstimate,
   isValidKyrgyzPhone,
 } from '../data/serviceData';
+import { useContent } from '../content/ContentContext';
 
 const DEVICE_OPTIONS = [
   { id: 'Ноутбук', label: 'Ноутбук', desc: 'Lenovo, ASUS, HP, Acer, Apple MacBook', icon: Laptop },
@@ -48,7 +49,7 @@ const LOCATION_OPTIONS = [
   {
     id: 'Привезу в сервисный центр',
     label: 'Привезу в сервисный центр',
-    hint: 'г. Ош, ул. Курманжан Датка, 248 (напротив ТЦ «Келечек»).',
+    hint: '', // подставляется адрес из контактов
   },
 ];
 
@@ -60,6 +61,8 @@ export default function PriceCalculatorQuiz() {
   const [phone, setPhone] = useState<string>('+996 ');
   const [phoneError, setPhoneError] = useState<string>('');
   const [submitted, setSubmitted] = useState(false);
+  const { contacts, sections } = useContent();
+  const text = sections.calculator;
 
   const estimate = calculateQuizEstimate(
     device || 'Ноутбук',
@@ -68,6 +71,7 @@ export default function PriceCalculatorQuiz() {
   );
 
   const whatsappSummaryUrl = buildWhatsAppUrl(
+    contacts.whatsappNumber,
     `Здравствуйте! Рассчитал стоимость на сайте со скидкой 10%:\nУстройство: ${device}\nПроблема: ${issue}\nФормат: ${location}\nОриентировочная цена со скидкой: от ${estimate.discountedMin} до ${estimate.discountedMax} сом\nМой номер: ${phone.trim()}`
   );
 
@@ -114,14 +118,11 @@ export default function PriceCalculatorQuiz() {
     <section id="calculator" className="border-y border-slate-200/80 bg-[#F8FAFC] py-16 sm:py-20">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
         <div className="text-center">
-          <p className="text-sm font-semibold text-blue-600">Онлайн-калькулятор стоимости</p>
+          <p className="text-sm font-semibold text-blue-600">{text.eyebrow}</p>
           <h2 className="font-display mt-2 text-balance text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-            Узнайте цену ремонта за 3 шага и получите скидку 10%
+            {text.title}
           </h2>
-          <p className="mx-auto mt-3 max-w-2xl text-base text-slate-600">
-            Ответьте на три коротких вопроса — система сразу покажет ориентировочную вилку цен в
-            сомах и закрепит за вами скидку 10% на работу мастера.
-          </p>
+          <p className="mx-auto mt-3 max-w-2xl text-base text-slate-600">{text.subtitle}</p>
         </div>
 
         <div className="mt-10 overflow-hidden rounded-2xl border border-slate-200 bg-white">
@@ -295,7 +296,7 @@ export default function PriceCalculatorQuiz() {
                               {item.label}
                             </span>
                             <span className="mt-1.5 text-xs leading-relaxed text-slate-600">
-                              {item.hint}
+                              {item.hint || contacts.address}
                             </span>
                           </button>
                         );
