@@ -3,6 +3,7 @@ import {
   ArrowDown,
   ArrowUp,
   ExternalLink,
+  KeyRound,
   LogOut,
   Plus,
   RotateCcw,
@@ -488,6 +489,139 @@ function LoginForm({ onSuccess }: { onSuccess: (password: string) => void }) {
   );
 }
 
+/* ---------------------------- Смена пароля ---------------------------- */
+
+const MIN_PASSWORD_LENGTH = 8;
+
+function PasswordForm({
+  currentPassword,
+  onChanged,
+  onUnauthorized,
+}: {
+  currentPassword: string;
+  onChanged: (newPassword: string) => void;
+  onUnauthorized: () => void;
+}) {
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [repeat, setRepeat] = useState('');
+  const [error, setError] = useState('');
+  const [done, setDone] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setDone(false);
+    if (oldPassword !== currentPassword) {
+      setError('Текущий пароль указан неверно.');
+      return;
+    }
+    if (newPassword.length < MIN_PASSWORD_LENGTH) {
+      setError(`Новый пароль должен быть не короче ${MIN_PASSWORD_LENGTH} символов.`);
+      return;
+    }
+    if (newPassword.trim() !== newPassword) {
+      setError('Пароль не должен начинаться или заканчиваться пробелом.');
+      return;
+    }
+    if (newPassword !== repeat) {
+      setError('Новые пароли не совпадают.');
+      return;
+    }
+    if (newPassword === currentPassword) {
+      setError('Новый пароль совпадает с текущим.');
+      return;
+    }
+
+    setError('');
+    setBusy(true);
+    try {
+      const res = await fetch('/api/content', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json', 'x-admin-password': currentPassword },
+        body: JSON.stringify({ newPassword }),
+      });
+      if (res.status === 401) return onUnauthorized();
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error ?? `Ошибка ${res.status}`);
+      }
+      onChanged(newPassword);
+      setOldPassword('');
+      setNewPassword('');
+      setRepeat('');
+      setDone(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось сменить пароль.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const field = (
+    id: string,
+    label: string,
+    value: string,
+    set: (v: string) => void,
+    autoComplete: string
+  ) => (
+    <div>
+      <label htmlFor={id} className="mb-1.5 block text-xs font-semibold text-slate-600">
+        {label}
+      </label>
+      <input
+        id={id}
+        type="password"
+        autoComplete={autoComplete}
+        value={value}
+        onChange={(e) => {
+          set(e.target.value);
+          setDone(false);
+        }}
+        className={`${inputClass} min-h-[44px]`}
+      />
+    </div>
+  );
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      noValidate
+      className="max-w-md space-y-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6"
+    >
+      {field('pw-old', 'Текущий пароль', oldPassword, setOldPassword, 'current-password')}
+      {field(
+        'pw-new',
+        `Новый пароль (не короче ${MIN_PASSWORD_LENGTH} символов)`,
+        newPassword,
+        setNewPassword,
+        'new-password'
+      )}
+      {field('pw-repeat', 'Повторите новый пароль', repeat, setRepeat, 'new-password')}
+
+      {error && (
+        <p className="text-sm font-medium text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+      {done && (
+        <p className="text-sm font-medium text-green-700" role="status">
+          Пароль изменен. Старый пароль больше не подходит.
+        </p>
+      )}
+
+      <button
+        type="submit"
+        disabled={busy || !oldPassword || !newPassword || !repeat}
+        className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-40"
+      >
+        <KeyRound className="h-4 w-4" aria-hidden="true" />
+        {busy ? 'Сохраняем…' : 'Сменить пароль'}
+      </button>
+    </form>
+  );
+}
+
 /* --------------------------- Панель целиком --------------------------- */
 
 type Status = { kind: 'ok' | 'error' | 'info'; text: string } | null;
@@ -498,6 +632,7 @@ export default function AdminPanel() {
   const [draft, setDraft] = useState<SiteContent | null>(null);
   const [savedJson, setSavedJson] = useState('');
   const [activeTab, setActiveTab] = useState<keyof SiteContent>('contacts');
+  const [view, setView] = useState<'content' | 'password'>('content');
   const [status, setStatus] = useState<Status>(null);
   const [busy, setBusy] = useState(false);
 
@@ -692,10 +827,13 @@ export default function AdminPanel() {
               <li key={t.key} className="shrink-0">
                 <button
                   type="button"
-                  onClick={() => setActiveTab(t.key)}
-                  aria-current={t.key === activeTab ? 'page' : undefined}
+                  onClick={() => {
+                    setActiveTab(t.key);
+                    setView('content');
+                  }}
+                  aria-current={view === 'content' && t.key === activeTab ? 'page' : undefined}
                   className={`w-full whitespace-nowrap rounded-lg px-3 py-2 text-left text-sm font-semibold transition-colors ${
-                    t.key === activeTab
+                    view === 'content' && t.key === activeTab
                       ? 'bg-blue-600 text-white'
                       : 'text-slate-700 hover:bg-white hover:text-slate-900'
                   }`}
@@ -704,6 +842,21 @@ export default function AdminPanel() {
                 </button>
               </li>
             ))}
+            <li className="shrink-0 lg:mt-3 lg:border-t lg:border-slate-200 lg:pt-3">
+              <button
+                type="button"
+                onClick={() => setView('password')}
+                aria-current={view === 'password' ? 'page' : undefined}
+                className={`inline-flex w-full items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-left text-sm font-semibold transition-colors ${
+                  view === 'password'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-slate-700 hover:bg-white hover:text-slate-900'
+                }`}
+              >
+                <KeyRound className="h-4 w-4" aria-hidden="true" />
+                Сменить пароль
+              </button>
+            </li>
           </ul>
           <button
             type="button"
@@ -717,6 +870,24 @@ export default function AdminPanel() {
         </nav>
 
         {/* Редактор */}
+        {view === 'password' ? (
+          <main className="min-w-0">
+            <div className="mb-5">
+              <h1 className="font-display text-2xl font-bold">Смена пароля</h1>
+              <p className="mt-1 text-sm text-slate-600">
+                Новый пароль начнет действовать сразу, старый перестанет подходить.
+              </p>
+            </div>
+            <PasswordForm
+              currentPassword={password}
+              onChanged={(pw) => {
+                storePassword(pw);
+                setPassword(pw);
+              }}
+              onUnauthorized={handleUnauthorized}
+            />
+          </main>
+        ) : (
         <main className="min-w-0">
           <div className="mb-5">
             <h1 className="font-display text-2xl font-bold">{tab.label}</h1>
@@ -740,6 +911,7 @@ export default function AdminPanel() {
             Сбросить к исходному
           </button>
         </main>
+        )}
       </div>
     </div>
   );
