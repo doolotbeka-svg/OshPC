@@ -27,9 +27,9 @@ export default function FaqSection() {
                 <button
                   type="button"
                   aria-expanded={isOpen}
-                  aria-controls={`${item.id}-panel`}
+                  aria-controls={isOpen ? `${item.id}-panel` : undefined}
                   onClick={() => toggleItem(item.id)}
-                  className="flex min-h-[60px] w-full items-center justify-between gap-4 px-5 py-4 text-left transition-colors hover:bg-slate-50/70 focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-blue-600 sm:px-6"
+                  className="flex min-h-[60px] w-full items-center justify-between gap-4 px-5 py-4 text-left transition-colors hover:bg-slate-50/70 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600 sm:px-6"
                 >
                   <span className="font-display text-base font-semibold text-slate-900 sm:text-lg">
                     {item.question}

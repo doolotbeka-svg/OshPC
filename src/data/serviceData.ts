@@ -40,9 +40,26 @@ export const SITE_CONTACTS = {
   instagramUrl: 'https://instagram.com/oshpc.service',
   address: 'г. Ош, ул. Курманжан Датка, 248 (ориентир — напротив ТЦ «Келечек»)',
   schedule: 'Ежедневно с 09:00 до 20:00 без выходных',
+  scheduleShort: 'Ежедневно 09:00–20:00',
   map2gisUrl: 'https://2gis.kg/osh',
   mapGoogleUrl: 'https://maps.google.com/?q=Osh+Kyrgyzstan',
 };
+
+/**
+ * Проверка номера Кыргызстана: +996XXXXXXXXX (12 цифр), 0XXXXXXXXX (10 цифр)
+ * или XXXXXXXXX (9 цифр без кода).
+ */
+export function isValidKyrgyzPhone(raw: string): boolean {
+  const digits = raw.replace(/\D/g, '');
+  if (digits.startsWith('996')) return digits.length === 12;
+  if (digits.startsWith('0')) return digits.length === 10;
+  return digits.length === 9;
+}
+
+/** Ссылка на WhatsApp с готовым текстом сообщения. */
+export function buildWhatsAppUrl(message: string): string {
+  return `https://wa.me/${SITE_CONTACTS.whatsappNumber}?text=${encodeURIComponent(message)}`;
+}
 
 export const SERVICE_CATEGORIES: { id: ServiceCategory; label: string }[] = [
   { id: 'all', label: 'Все услуги' },
@@ -314,10 +331,8 @@ export function calculateQuizEstimate(
     maxPrice += 400;
   }
 
-  // Выезд бесплатный при ремонте, но отмечаем логистику
-  if (location === 'Привезу в сервисный центр') {
-    // Без доп. изменений к базовой оценке
-  }
+  // Формат (выезд / сервис) пока не влияет на цену: выезд бесплатный при ремонте.
+  void location;
 
   const discountedMin = Math.round((minPrice * 0.9) / 50) * 50;
   const discountedMax = Math.round((maxPrice * 0.9) / 50) * 50;

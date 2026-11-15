@@ -46,7 +46,7 @@ export default function ReviewsSection() {
 
                   <div className="flex shrink-0 items-center gap-1 text-sm font-semibold text-slate-900 tabular-nums">
                     <Star className="h-4 w-4 fill-amber-400 text-amber-400" aria-hidden="true" />
-                    <span>5.0</span>
+                    <span>{review.rating.toFixed(1)}</span>
                   </div>
                 </div>
 

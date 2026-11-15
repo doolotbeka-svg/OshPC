@@ -9,7 +9,11 @@ import {
   MessageCircle,
   RotateCcw,
 } from 'lucide-react';
-import { calculateQuizEstimate, SITE_CONTACTS } from '../data/serviceData';
+import {
+  buildWhatsAppUrl,
+  calculateQuizEstimate,
+  isValidKyrgyzPhone,
+} from '../data/serviceData';
 
 const DEVICE_OPTIONS = [
   { id: 'Ноутбук', label: 'Ноутбук', desc: 'Lenovo, ASUS, HP, Acer, Apple MacBook', icon: Laptop },
@@ -48,11 +52,6 @@ const LOCATION_OPTIONS = [
   },
 ];
 
-function isValidKyrgyzPhone(raw: string): boolean {
-  const digits = raw.replace(/\D/g, '');
-  return digits.length >= 9 && digits.length <= 13;
-}
-
 export default function PriceCalculatorQuiz() {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [device, setDevice] = useState<string>('');
@@ -66,6 +65,10 @@ export default function PriceCalculatorQuiz() {
     device || 'Ноутбук',
     issue || 'Другое',
     location || 'Выезд мастера на дом по Ошу'
+  );
+
+  const whatsappSummaryUrl = buildWhatsAppUrl(
+    `Здравствуйте! Рассчитал стоимость на сайте со скидкой 10%:\nУстройство: ${device}\nПроблема: ${issue}\nФормат: ${location}\nОриентировочная цена со скидкой: от ${estimate.discountedMin} до ${estimate.discountedMax} сом\nМой номер: ${phone.trim()}`
   );
 
   const handleSelectDevice = (selected: string) => {
@@ -91,6 +94,8 @@ export default function PriceCalculatorQuiz() {
     }
     setPhoneError('');
     setSubmitted(true);
+    // У сайта нет бэкенда: расчет уходит мастеру сообщением в WhatsApp
+    window.open(whatsappSummaryUrl, '_blank', 'noopener,noreferrer');
   };
 
   const handleReset = () => {
@@ -102,10 +107,6 @@ export default function PriceCalculatorQuiz() {
     setPhoneError('');
     setSubmitted(false);
   };
-
-  const whatsappSummaryUrl = `https://wa.me/${SITE_CONTACTS.whatsappNumber}?text=${encodeURIComponent(
-    `Здравствуйте! Рассчитал стоимость на сайте со скидкой 10%:\nУстройство: ${device}\nПроблема: ${issue}\nФормат: ${location}\nОриентировочная цена со скидкой: от ${estimate.discountedMin} до ${estimate.discountedMax} сом\nМой номер: ${phone}`
-  )}`;
 
   const progressScale = step === 1 ? 0.25 : step === 2 ? 0.5 : step === 3 ? 0.75 : 1;
 
@@ -146,10 +147,10 @@ export default function PriceCalculatorQuiz() {
                     <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-[#16A34A]" aria-hidden="true" />
                     <div>
                       <h3 className="font-display text-xl font-bold text-slate-900">
-                        Заявка принята — скидка 10% закреплена за вашим номером
+                        Расчет готов — отправьте его мастеру в WhatsApp
                       </h3>
                       <p className="mt-1 text-sm text-slate-600">
-                        Мастер свяжется с вами по номеру <span className="font-semibold text-slate-900 tabular-nums">{phone}</span> в течение 5–10 минут.
+                        Мы открыли WhatsApp с расчетом — нажмите «Отправить», чтобы закрепить скидку 10%. Мастер свяжется с вами по номеру <span className="font-semibold text-slate-900 tabular-nums">{phone}</span> в течение 5–10 минут.
                       </p>
                     </div>
                   </div>

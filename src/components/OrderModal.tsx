@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { CheckCircle2, MessageCircle, X } from 'lucide-react';
-import { SITE_CONTACTS } from '../data/serviceData';
+import { buildWhatsAppUrl, isValidKyrgyzPhone } from '../data/serviceData';
 
 interface OrderModalProps {
   isOpen: boolean;
@@ -29,34 +29,40 @@ export default function OrderModal({ isOpen, initialProblem = '', onClose }: Ord
       if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    // Блокируем прокрутку страницы под открытым окном
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = prevOverflow;
+    };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
+  const whatsappDirect = buildWhatsAppUrl(
+    `Здравствуйте! Заявка с сайта OshPC Service:\nИмя: ${name.trim()}\nТелефон: ${phone.trim()}\nПроблема: ${
+      problem.trim() || 'Нужна консультация и диагностика'
+    }`
+  );
+
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    const trimmedName = name.trim();
-    const digits = phone.replace(/\D/g, '');
 
-    if (trimmedName.length < 2) {
+    if (name.trim().length < 2) {
       setError('Пожалуйста, укажите ваше имя.');
       return;
     }
-    if (digits.length < 9 || digits.length > 13) {
+    if (!isValidKyrgyzPhone(phone)) {
       setError('Введите корректный номер телефона в формате +996 (XXX) XX-XX-XX.');
       return;
     }
 
     setError('');
     setSubmitted(true);
+    // У сайта нет бэкенда: заявка уходит мастеру сообщением в WhatsApp
+    window.open(whatsappDirect, '_blank', 'noopener,noreferrer');
   };
-
-  const whatsappDirect = `https://wa.me/${SITE_CONTACTS.whatsappNumber}?text=${encodeURIComponent(
-    `Здравствуйте! Заявка с сайта OshPC Service:\nИмя: ${name}\nТелефон: ${phone}\nПроблема: ${
-      problem || 'Нужна консультация и диагностика'
-    }`
-  )}`;
 
   return (
     <div
@@ -82,12 +88,13 @@ export default function OrderModal({ isOpen, initialProblem = '', onClose }: Ord
           <div className="py-2">
             <CheckCircle2 className="h-10 w-10 text-[#16A34A]" aria-hidden="true" />
             <h2 id="order-modal-title" className="font-display mt-4 text-2xl font-bold text-slate-900">
-              Заявка отправлена!
+              Почти готово!
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-slate-600">
-              Спасибо, {name}. Дежурный мастер в Оше перезвонит на номер{' '}
+              Спасибо, {name.trim()}. Мы открыли WhatsApp с текстом заявки — нажмите «Отправить», и
+              дежурный мастер в Оше перезвонит на номер{' '}
               <span className="font-semibold text-slate-900 tabular-nums">{phone}</span> в течение 5–10
-              минут, чтобы уточнить детали и время выезда.
+              минут. Если WhatsApp не открылся, нажмите кнопку ниже.
             </p>
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
@@ -98,7 +105,7 @@ export default function OrderModal({ isOpen, initialProblem = '', onClose }: Ord
                 className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-[#16A34A] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#15803D]"
               >
                 <MessageCircle className="h-4 w-4" aria-hidden="true" />
-                <span>Написать в WhatsApp</span>
+                <span>Отправить заявку в WhatsApp</span>
               </a>
               <button
                 type="button"

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ArrowRight, CheckCircle2, Laptop, MapPin, MessageCircle } from 'lucide-react';
 import { SITE_CONTACTS } from '../data/serviceData';
+import heroImage from '../assets/images/hero_repair_workbench_1794754544272.jpg';
 
 interface HeroProps {
   onOpenOrderModal: (prefill?: string) => void;
@@ -36,7 +37,7 @@ export default function Hero({ onOpenOrderModal }: HeroProps) {
               <span aria-hidden="true" className="text-slate-300">
                 ·
               </span>
-              <span>Ежедневно 09:00–20:00</span>
+              <span>{SITE_CONTACTS.scheduleShort}</span>
             </div>
 
             <h1 className="font-display max-w-2xl text-balance text-[clamp(2rem,3.6vw,3.25rem)] font-bold leading-[1.12] tracking-tight text-slate-900">
@@ -89,7 +90,7 @@ export default function Hero({ onOpenOrderModal }: HeroProps) {
             <div className="relative h-full min-h-[260px] overflow-hidden rounded-2xl border border-slate-200 bg-white sm:min-h-[340px]">
               {!imageError ? (
                 <img
-                  src="/src/assets/images/hero_repair_workbench_1794754544272.jpg"
+                  src={heroImage}
                   alt="Современное рабочее место мастера по ремонту и диагностике ноутбуков в Оше"
                   referrerPolicy="no-referrer"
                   onError={() => setImageError(true)}

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Cpu, MapPin, ShieldCheck, Wallet } from 'lucide-react';
 import { ADVANTAGES, WORKFLOW_STEPS } from '../data/serviceData';
+import workshopImage from '../assets/images/workshop_diagnostics_osh_1794754545576.jpg';
 
 const ADVANTAGE_ICONS = [Wallet, MapPin, Cpu, ShieldCheck];
 
@@ -47,7 +48,7 @@ export default function WorkflowAndAdvantages() {
               <div className="relative h-full min-h-[260px] overflow-hidden rounded-2xl border border-slate-200 bg-white sm:min-h-[340px]">
                 {!imageError ? (
                   <img
-                    src="/src/assets/images/workshop_diagnostics_osh_1794754545576.jpg"
+                    src={workshopImage}
                     alt="Чистая разборка, апгрейд NVMe SSD и обслуживание системы охлаждения ноутбука"
                     referrerPolicy="no-referrer"
                     onError={() => setImageError(true)}
