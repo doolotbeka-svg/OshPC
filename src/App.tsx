@@ -19,7 +19,10 @@ import FloatingWhatsApp from './components/FloatingWhatsApp';
 const AdminPanel = lazy(() => import('./admin/AdminPanel'));
 
 function useIsAdminRoute(): boolean {
-  const [isAdmin, setIsAdmin] = useState(() => window.location.hash === '#admin');
+  // На сервере window нет: там всегда отрисовывается сайт, а не админка
+  const [isAdmin, setIsAdmin] = useState(
+    () => typeof window !== 'undefined' && window.location.hash === '#admin'
+  );
   useEffect(() => {
     const onHashChange = () => setIsAdmin(window.location.hash === '#admin');
     window.addEventListener('hashchange', onHashChange);

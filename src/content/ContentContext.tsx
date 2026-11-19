@@ -23,11 +23,19 @@ export async function fetchSavedContent(signal?: AbortSignal): Promise<SiteConte
   return data ? mergeContent(DEFAULT_CONTENT, data) : DEFAULT_CONTENT;
 }
 
-export function ContentProvider({ children }: { children: ReactNode }) {
-  const [content, setContent] = useState<SiteContent>(DEFAULT_CONTENT);
-  const [ready, setReady] = useState(false);
+export function ContentProvider({
+  children,
+  initialContent,
+}: {
+  children: ReactNode;
+  /** Содержимое, уже встроенное в страницу сервером: тогда ничего не загружаем */
+  initialContent?: SiteContent;
+}) {
+  const [content, setContent] = useState<SiteContent>(initialContent ?? DEFAULT_CONTENT);
+  const [ready, setReady] = useState(initialContent !== undefined);
 
   useEffect(() => {
+    if (initialContent) return;
     const controller = new AbortController();
     const timer = window.setTimeout(() => setReady(true), LOAD_TIMEOUT_MS);
     fetchSavedContent(controller.signal)
@@ -43,7 +51,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
       controller.abort();
       window.clearTimeout(timer);
     };
-  }, []);
+  }, [initialContent]);
 
   useEffect(() => {
     document.title = content.seo.title;
